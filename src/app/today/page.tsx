@@ -29,9 +29,14 @@ export default function TodayPage() {
   async function load() {
     setBusy(true);
     try {
-      const { data: userData, error: uerr } = await supabase.auth.getUser();
-      if (uerr) throw uerr;
-      const userId = userData.user.id;
+	const { data: userData, error: uerr } = await supabase.auth.getUser();
+	if (uerr) throw uerr;
+	const user = userData.user;
+	if (!user) {
+  	  router.replace("/");
+ 	  return;
+	}
+	const userId = user.id;
 
       const { data: h, error: herr } = await supabase
         .from("habits")
@@ -71,8 +76,15 @@ export default function TodayPage() {
   async function toggle(habitId: string) {
     setBusy(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user.id;
+
+	const { data: userData, error: uerr } = await supabase.auth.getUser();
+	if (uerr) throw uerr;
+	  const user = userData.user;
+	  if (!user) {
+	router.replace("/");
+	return;
+	}
+	const userId = user.id;
 
       const next = !checked[habitId];
 
