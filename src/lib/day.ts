@@ -7,3 +7,13 @@ export function todayInNY(): string {
   });
   return formatter.format(new Date()); // YYYY-MM-DD
 }
+
+// Treat YYYY-MM-DD as a pure date and do math in UTC (safe for date-only streak math)
+export function addDays(dateStr: string, deltaDays: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
