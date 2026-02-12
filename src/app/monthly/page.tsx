@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import MonthlyView from "@/components/MonthlyView";
 
 export default function MonthlyPage() {
   return (
-    <main className="min-h-screen p-6">
+    <Suspense fallback={<div className="p-6">Loading monthly view…</div>}>
       <MonthlyView />
-    </main>
+    </Suspense>
   );
 }
+
