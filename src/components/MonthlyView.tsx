@@ -83,7 +83,6 @@ export default function MonthlyView() {
   }, [monthParam]);
 
   const [monthDate, setMonthDate] = useState(() => initialMonthDate);
-
   const [checkRows, setCheckRows] = useState<HabitCheckRow[]>([]);
   const [habitsRows, setHabitsRows] = useState<HabitRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,6 +92,16 @@ export default function MonthlyView() {
 
   const nextMonthStartISO = useMemo(() => {
     return toISODate(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1));
+  }, [monthDate]);
+
+  // Keep URL in sync with chosen month (so back/forward + deep links work)
+  useEffect(() => {
+    const mm = String(monthDate.getMonth() + 1).padStart(2, "0");
+    const nextParam = `${monthDate.getFullYear()}-${mm}`;
+    if (nextParam !== monthParam) {
+      router.replace(`/monthly?month=${nextParam}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthDate]);
 
   const habitNameById = useMemo(() => {
@@ -127,6 +136,43 @@ export default function MonthlyView() {
     }
     return map;
   }, [checkRows]);
+
+  // Quick month stats for polish + insight
+  const monthStats = useMemo(() => {
+    const totalHabits = activeHabits.length;
+    if (!totalHabits) {
+      return { perfectDays: 0, bestDayISO: null as string | null, bestDone: 0, avgPct: 0 };
+    }
+
+    let perfectDays = 0;
+    let bestDayISO: string | null = null;
+    let bestDone = 0;
+
+    // Only count days that are in the displayed month
+    const monthDays = cal.cells
+      .filter((d) => d.getMonth() === cal.monthIndex)
+      .map((d) => toISODate(d));
+
+    let sumPct = 0;
+    let counted = 0;
+
+    for (const iso of monthDays) {
+      const done = (checksByDate.get(iso)?.size ?? 0);
+      const pct = done / totalHabits;
+
+      sumPct += pct;
+      counted += 1;
+
+      if (done === totalHabits) perfectDays += 1;
+      if (done > bestDone) {
+        bestDone = done;
+        bestDayISO = iso;
+      }
+    }
+
+    const avgPct = counted ? Math.round((sumPct / counted) * 100) : 0;
+    return { perfectDays, bestDayISO, bestDone, avgPct };
+  }, [activeHabits.length, cal.cells, cal.monthIndex, checksByDate]);
 
   useEffect(() => {
     let alive = true;
@@ -183,6 +229,8 @@ export default function MonthlyView() {
 
   const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+  const todayISO = useMemo(() => toISODate(new Date()), []);
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
@@ -199,6 +247,7 @@ export default function MonthlyView() {
             <button
               className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm shadow-sm hover:bg-gray-50 active:scale-[0.99]"
               onClick={() => setMonthDate((d) => addMonths(d, -1))}
+              aria-label="Previous month"
             >
               ← <span className="hidden sm:inline">Prev</span>
             </button>
@@ -210,6 +259,7 @@ export default function MonthlyView() {
             <button
               className="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm shadow-sm hover:bg-gray-50 active:scale-[0.99]"
               onClick={() => setMonthDate((d) => addMonths(d, 1))}
+              aria-label="Next month"
             >
               <span className="hidden sm:inline">Next</span> →
             </button>
@@ -225,23 +275,54 @@ export default function MonthlyView() {
           </div>
         )}
 
-        {/* Legend */}
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-gray-600">
-          <span className="font-medium text-gray-800">Completion</span>
-          <span className="w-4 h-4 rounded-md border bg-white" />
-          <span className="w-4 h-4 rounded-md border bg-gray-50" />
-          <span className="w-4 h-4 rounded-md border bg-gray-100" />
-          <span className="w-4 h-4 rounded-md border bg-gray-200" />
-          <span className="w-4 h-4 rounded-md border bg-gray-300" />
-          <span className="w-4 h-4 rounded-md border bg-gray-900" />
-          <span className="ml-1">0 → 100%</span>
-          <span className="ml-auto text-xs text-gray-500">
-            {loading ? "Loading…" : `Checks: ${checkRows.length} • Active habits: ${activeHabits.length}`}
-          </span>
+        {/* Legend + Stats */}
+        <div className="mb-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <div className="rounded-2xl border bg-white shadow-sm px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+              <span className="font-medium text-gray-800">Completion</span>
+              <span className="w-4 h-4 rounded-md border bg-white" />
+              <span className="w-4 h-4 rounded-md border bg-gray-50" />
+              <span className="w-4 h-4 rounded-md border bg-gray-100" />
+              <span className="w-4 h-4 rounded-md border bg-gray-200" />
+              <span className="w-4 h-4 rounded-md border bg-gray-300" />
+              <span className="w-4 h-4 rounded-md border bg-gray-900" />
+              <span className="ml-1">0 → 100%</span>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              {loading ? "Loading…" : `Checks: ${checkRows.length} • Active habits: ${activeHabits.length}`}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-white shadow-sm px-4 py-3">
+            <div className="text-xs text-gray-600">Average completion</div>
+            <div className="mt-1 text-2xl font-semibold tracking-tight">{monthStats.avgPct}%</div>
+            <div className="mt-2 h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+              <div
+                className="h-full bg-gray-900"
+                style={{ width: `${monthStats.avgPct}%`, transition: "width 250ms ease" }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-white shadow-sm px-4 py-3">
+            <div className="text-xs text-gray-600">Perfect days</div>
+            <div className="mt-1 text-2xl font-semibold tracking-tight">
+              {monthStats.perfectDays}
+              <span className="text-sm font-medium text-gray-500 ml-2">
+                {activeHabits.length ? `/ ${cal.cells.filter((d) => d.getMonth() === cal.monthIndex).length}` : ""}
+              </span>
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              Best day:{" "}
+              <span className="font-mono">
+                {monthStats.bestDayISO ? `${monthStats.bestDayISO} (${monthStats.bestDone}/${activeHabits.length || 0})` : "—"}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Weekdays */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
           {weekdayLabels.map((w) => (
             <div key={w} className="px-2 text-[11px] font-semibold text-gray-600">
               {w}
@@ -250,7 +331,7 @@ export default function MonthlyView() {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {cal.cells.map((d) => {
             const iso = toISODate(d);
             const inMonth = d.getMonth() === cal.monthIndex;
@@ -261,6 +342,7 @@ export default function MonthlyView() {
 
             const heat = heatClass(doneCount, total);
             const dark = heat.includes("text-white");
+            const isToday = iso === todayISO;
 
             return (
               <button
@@ -268,18 +350,20 @@ export default function MonthlyView() {
                 type="button"
                 onClick={() => router.push(`/today?date=${iso}`)}
                 className={[
-                  "group rounded-2xl border p-3 min-h-[110px] text-left transition",
+                  "group rounded-2xl border p-3 min-h-[104px] sm:min-h-[118px] text-left transition",
                   "shadow-sm hover:shadow-md hover:-translate-y-[1px] active:translate-y-0",
                   "focus:outline-none focus:ring-2 focus:ring-gray-400",
                   inMonth ? heat : "bg-gray-50 opacity-70",
+                  isToday ? "ring-2 ring-gray-900 ring-offset-2" : "",
                 ].join(" ")}
+                aria-label={`Open ${iso}`}
               >
                 <div className="flex items-start justify-between">
                   <div className={["text-sm font-semibold", dark ? "text-white" : "text-gray-900"].join(" ")}>
                     {d.getDate()}
                   </div>
 
-                  <div className={["text-xs", dark ? "text-white/80" : "text-gray-600"].join(" ")}>
+                  <div className={["text-xs tabular-nums", dark ? "text-white/80" : "text-gray-600"].join(" ")}>
                     {total ? `${doneCount}/${total}` : "—"}
                   </div>
                 </div>
@@ -315,7 +399,12 @@ export default function MonthlyView() {
                   )}
                 </div>
 
-                <div className={["mt-3 text-[11px] opacity-0 group-hover:opacity-100 transition", dark ? "text-white/80" : "text-gray-500"].join(" ")}>
+                <div
+                  className={[
+                    "mt-3 text-[11px] opacity-0 group-hover:opacity-100 transition",
+                    dark ? "text-white/80" : "text-gray-500",
+                  ].join(" ")}
+                >
                   Tap to edit
                 </div>
               </button>
