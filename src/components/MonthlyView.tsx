@@ -350,7 +350,7 @@ export default function MonthlyView() {
                 type="button"
                 onClick={() => router.push(`/today?date=${iso}`)}
                 className={[
-                  "group rounded-2xl border p-3 min-h-[104px] sm:min-h-[118px] text-left transition",
+                  "group rounded-2xl border p-3 h-[120px] sm:h-[140px] text-left transition",
                   "shadow-sm hover:shadow-md hover:-translate-y-[1px] active:translate-y-0",
                   "focus:outline-none focus:ring-2 focus:ring-gray-400",
                   inMonth ? heat : "bg-gray-50 opacity-70",
@@ -368,7 +368,7 @@ export default function MonthlyView() {
                   </div>
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="mt-2 flex flex-wrap gap-1 max-h-[56px] overflow-hidden">
                   {Array.from(checkedIds)
                     .slice(0, 4)
                     .map((habitId) => {
