@@ -331,7 +331,7 @@ export default function MonthlyView() {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 auto-rows-[120px] sm:auto-rows-[140px]">
           {cal.cells.map((d) => {
             const iso = toISODate(d);
             const inMonth = d.getMonth() === cal.monthIndex;
@@ -350,7 +350,7 @@ export default function MonthlyView() {
                 type="button"
                 onClick={() => router.push(`/today?date=${iso}`)}
                 className={[
-                  "group rounded-2xl border p-3 h-[120px] sm:h-[140px] text-left transition",
+                  "group rounded-2xl border p-3 h-full text-left transition",
                   "shadow-sm hover:shadow-md hover:-translate-y-[1px] active:translate-y-0",
                   "focus:outline-none focus:ring-2 focus:ring-gray-400",
                   inMonth ? heat : "bg-gray-50 opacity-70",
@@ -401,7 +401,7 @@ export default function MonthlyView() {
 
                 <div
                   className={[
-                    "mt-3 text-[11px] opacity-0 group-hover:opacity-100 transition",
+                    "mt-3 text-[11px] opacity-0 group-hover:opacity-100 transition h-[14px]",
                     dark ? "text-white/80" : "text-gray-500",
                   ].join(" ")}
                 >
